@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>아이디어 공유</title>
+    <!-- Bootstrap CSS for 간단한 디자인과 반응형 레이아웃 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome 아이콘 사용 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- CSS 커스터마이징 -->
+    <style>
+        body {
+            background-color: #f0f4f8;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        h1 {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+            text-align: center;
+        }
+
+        .form-control {
+            border-radius: 12px;
+            border: 2px solid #ced4da;
+            padding: 15px;
+            font-size: 16px;
+        }
+
+        .btn-primary {
+            background-color: #6c63ff;
+            border-color: #6c63ff;
+            border-radius: 12px;
+            padding: 10px 20px;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background-color: #5348c7;
+        }
+
+        /* 카드 스타일 */
+        .idea-card {
+            background-color: #fff;
+            border-radius: 15px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .idea-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            cursor: pointer;
+        }
+
+        .card-title {
+            font-weight: bold;
+            color: #333;
+            font-size: 1.25rem;
+            margin-bottom: 10px;
+        }
+
+        .card-text {
+            color: #555;
+            font-size: 1rem;
+        }
+
+        .card-footer {
+            font-size: 0.875rem;
+            color: #999;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .delete-btn {
+            border-radius: 8px;
+            font-size: 14px;
+            padding: 6px 12px;
+            background-color: #ff6b6b;
+            border: none;
+            color: white;
+            transition: background-color 0.3s ease;
+        }
+
+        .delete-btn:hover {
+            background-color: #ff4757;
+        }
+
+        /* 팝업창 스타일 */
+        .modal-content {
+            border-radius: 15px;
+            padding: 20px;
+        }
+
+        .like-btn {
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: #6c63ff;
+        }
+
+        .like-btn:hover {
+            color: #5348c7;
+        }
+
+        /* 반응형 레이아웃 */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+            .form-control {
+                margin-bottom: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>아이디어 공유</h1>
+
+        <!-- 입력 섹션 -->
+        <div class="input-section">
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <input type="text" id="ideaTitle" class="form-control" placeholder="제목">
+                </div>
+                <div class="col-md-6">
+                    <input type="text" id="ideaContent" class="form-control" placeholder="아이디어를 입력하세요">
+                </div>
+                <div class="col-md-2">
+                    <button id="addIdeaBtn" class="btn btn-primary w-100">추가</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 아이디어 카드 섹션 -->
+        <div id="ideasContainer" class="row row-cols-1 row-cols-md-3 g-4"></div>
+    </div>
+
+    <!-- 모달 팝업창 -->
+    <div class="modal fade" id="ideaModal" tabindex="-1" aria-labelledby="ideaModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="ideaModalLabel">아이디어 제목</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p id="ideaModalContent">아이디어 내용</p>
+            <p><strong>좋아요 수: </strong><span id="likeCount">0</span></p>
+            <button id="likeBtn" class="like-btn"><i class="fas fa-heart"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bootstrap JS (모달 등 기능 추가시 사용) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Firebase 설정 -->
+    <script type="module">
+      // Firebase SDK 가져오기
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+      import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-analytics.js";
+      import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
+
+      // Firebase 설정 정보
+      const firebaseConfig = {
+        apiKey: "AIzaSyCkwWBRWA_d2E0atUIYs3ThSf3lhh59zhE",
+        authDomain: "today-6d383.firebaseapp.com",
+        projectId: "today-6d383",
+        storageBucket: "today-6d383.appspot.com",
+        messagingSenderId: "846287084542",
+        appId: "1:846287084542:web:0804f5763be6ba0dfcfeaf",
+        measurementId: "G-W84Y4FHPYN"
+      };
+
+      // Firebase 초기화
+      const app = initializeApp(firebaseConfig);
+      const analytics = getAnalytics(app);
+      const db = getFirestore(app);
+
+      // 새로운 아이디어 추가 기능
+      document.getElementById("addIdeaBtn").addEventListener("click", async () => {
+        const ideaTitle = document.getElementById("ideaTitle").value;
+        const ideaContent = document.getElementById("ideaContent").value;
+        const currentDate = new Date().toLocaleString();
+        if (ideaTitle && ideaContent) {
+          try {
+            await addDoc(collection(db, "ideas"), {
+              title: ideaTitle,
+              content: ideaContent,
+              date: currentDate,
+              likes: 0
+            });
+            document.getElementById("ideaTitle").value = '';
+            document.getElementById("ideaContent").value = '';
+          } catch (e) {
+            console.error("Error adding document: ", e);
+          }
+        }
+      });
+
+      // 실시간으로 아이디어 동기화 및 표시
+      onSnapshot(collection(db, "ideas"), (snapshot) => {
+        const ideasContainer = document.getElementById("ideasContainer");
+        ideasContainer.innerHTML = ''; // 기존 아이디어들 초기화
+        snapshot.forEach((doc) => {
+          const idea = doc.data();
+          ideasContainer.innerHTML += `
+            <div class="col">
+              <div class="card h-100 idea-card" data-id="${doc.id}">
+                <div class="card-body">
+                  <h5 class="card-title">${idea.title}</h5>
+                  <p class="card-text">${idea.content}</p>
+                </div>
+                <div class="card-footer">
+                  <span>${idea.date}</span>
+                  <span><i class="fas fa-heart"></i> ${idea.likes}</span>
+                </div>
+              </div>
+            </div>
+          `;
+        });
+
+        // 카드 클릭 시 모달 창에 아이디어 내용 표시
+        document.querySelectorAll('.idea-card').forEach((card) => {
+          card.addEventListener('click', (e) => {
+            const id = card.getAttribute('data-id');
+            const idea = snapshot.docs.find((doc) => doc.id === id).data();
+            document.getElementById("ideaModalLabel").innerText = idea.title;
+            document.getElementById("ideaModalContent").innerText = idea.content;
+            document.getElementById("likeCount").innerText = idea.likes;
+            document.getElementById("likeBtn").setAttribute('data-id', id);
+            const modal = new bootstrap.Modal(document.getElementById('ideaModal'));
+            modal.show();
+          });
+        });
+
+        // 좋아요 버튼 클릭 시 좋아요 수 업데이트
+        document.getElementById("likeBtn").addEventListener("click", async (e) => {
+          const id = e.target.getAttribute('data-id');
+          const ideaDoc = snapshot.docs.find((doc) => doc.id === id);
+          const currentLikes = ideaDoc.data().likes;
+          try {
+            await updateDoc(doc(db, "ideas", id), {
+              likes: currentLikes + 1
+            });
+          } catch (error) {
+            console.error("Error updating document: ", error);
+          }
+        });
+      });
+    </script>
+</body>
+</html>
